@@ -89,12 +89,5 @@ public class Main extends JFrame {
 	
 	public static void main(String[] args) {
 		Main NatDeduc = new Main();
-		
-		//Parser p = new Parser();
-		//p.parseLine("(sv(p&q)=(j^(~d)^j)vj)");
-		//p.parseLine("(j(j))");
-		//p.parseLine("p");
-		//p.parseLine("(p&(q&r)&(q&(r&s))");
-		//p.parseLine("(p&(q&r))&(q&(r&s))");
 	}
 }

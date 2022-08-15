@@ -6,6 +6,7 @@ import javax.swing.*;
 
 public class CheckPanel extends KeyablePanel implements ActionListener {
 	JTextArea bodyArea;
+	JScrollPane bodyScroll;
 	JButton checkButton;
 	
 	public CheckPanel(Main m) {
@@ -113,7 +114,7 @@ public class CheckPanel extends KeyablePanel implements ActionListener {
 	
 	private void addBodyArea() {
 		bodyArea = new JTextArea(7, 20);
-		JScrollPane bodyScroll = new JScrollPane(bodyArea);
+		bodyScroll = new JScrollPane(bodyArea);
 		
 		GridBagConstraints c = new GridBagConstraints();
 		c.gridx = 1;
@@ -145,11 +146,12 @@ public class CheckPanel extends KeyablePanel implements ActionListener {
 		String body = bodyArea.getText();
 		
 		// Remove the components below the new premise
-		this.remove(bodyArea);
+		this.remove(bodyScroll);
 		this.remove(concLabel);
 		this.remove(concField);
 		this.remove(checkButton);
 		this.remove(premButton);
+		
 		
 		// Add new premise
 		prems++;
@@ -159,7 +161,7 @@ public class CheckPanel extends KeyablePanel implements ActionListener {
 		addConc();
 		addCheckButton();
 		addPremButton();
-		concField.replaceSelection(conc);
+		//concField.replaceSelection(conc);
 		bodyArea.replaceSelection(body);
 		
 		repaint();
