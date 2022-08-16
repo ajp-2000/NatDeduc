@@ -243,7 +243,7 @@ public class Deduction {
 	// The following methods check whether one/two proposition/s entail a third via a specific rule
 	// Where there are multiple input Propositions, they are order-sensitive (this
 	// shifts the extra work to the brute forcer)
-	public boolean conjIntro(Proposition inP1, Proposition inP2, Proposition outP) {
+	public static boolean conjIntro(Proposition inP1, Proposition inP2, Proposition outP) {
 		if (outP.places==2) {
 			if (outP.place1.sameAs(inP1)) {
 				if (outP.place2.sameAs(inP2)) {
@@ -258,7 +258,7 @@ public class Deduction {
 		return false;
 	}
 	
-	public boolean conjElim(Proposition inP, Proposition outP) {
+	public static boolean conjElim(Proposition inP, Proposition outP) {
 		if (inP.places==2) {
 			if (inP.operation=='∧') {
 				if (inP.place1.sameAs(outP) || inP.place2.sameAs(outP)) {
@@ -271,7 +271,7 @@ public class Deduction {
 		return false;
 	}
 	
-	public boolean disjIntro(Proposition inP, Proposition outP) {
+	public static boolean disjIntro(Proposition inP, Proposition outP) {
 		if (outP.places==2) {
 			if (outP.operation=='∨') {
 				if (outP.place1.sameAs(inP) || outP.place2.sameAs(inP)) {
@@ -287,7 +287,7 @@ public class Deduction {
 	// With the rules that use assumption blocks, the block must be given as a deduction,
 		// meaning the work to make sure we really do have an assumption block to try must be done 
 		// by check() when deciding which rules to brute-force
-	public boolean disjElim(Proposition inP, Deduction inD1, Deduction inD2, Proposition outP) {
+	public static boolean disjElim(Proposition inP, Deduction inD1, Deduction inD2, Proposition outP) {
 		if (inP.places==2 && inP.operation=='∨') {
 			if (inD1.lastPrem.sameAs(inP.place1) && inD2.lastPrem.sameAs(inP.place2)) {
 				if (inD1.conc.sameAs(inD2.conc)) {
@@ -302,7 +302,7 @@ public class Deduction {
 		return false;
 	}
 	
-	public boolean condIntro(Deduction inD, Proposition outP) {
+	public static boolean condIntro(Deduction inD, Proposition outP) {
 		if (outP.places==2) {
 			if (outP.operation=='→') {
 				if (inD.lastPrem.sameAs(outP.place1) && inD.conc.sameAs(outP.place2)) {
@@ -316,7 +316,7 @@ public class Deduction {
 	}
 	
 	
-	public boolean condElim(Proposition inP1, Proposition inP2, Proposition outP) {
+	public static boolean condElim(Proposition inP1, Proposition inP2, Proposition outP) {
 		if (inP1.places==2) {
 			if (inP1.operation=='→') {
 				if (inP1.place1.sameAs(inP2)) {
@@ -331,7 +331,7 @@ public class Deduction {
 		return false;
 	}
 	
-	public boolean bicondIntro(Proposition inP1, Proposition inP2, Proposition outP) {
+	public static boolean bicondIntro(Proposition inP1, Proposition inP2, Proposition outP) {
 		if (inP1.places==2 && inP2.places==2) {
 			if (inP1.operation=='→' && inP2.operation=='→') {
 				if (inP1.place1.sameAs(inP2.place2) && inP1.place2.sameAs(inP2.place1)) {
@@ -348,7 +348,7 @@ public class Deduction {
 		return false;
 	}
 	
-	public boolean bicondElim(Proposition inP1, Proposition inP2, Proposition outP) {
+	public static boolean bicondElim(Proposition inP1, Proposition inP2, Proposition outP) {
 		if (inP1.places==2) {
 			if (inP1.operation=='↔') {
 				if (inP1.place1.sameAs(inP2) && inP1.place2.sameAs(outP)) {
@@ -364,7 +364,7 @@ public class Deduction {
 		return false;
 	}
 	
-	public boolean negIntro(Deduction inD, Proposition outP) {
+	public static boolean negIntro(Deduction inD, Proposition outP) {
 		if (outP.places==1) {
 			if (outP.operation=='¬') {
 				if (inD.lastPrem.sameAs(outP.place1) && inD.conc.name.equals("⊥")) {
@@ -377,7 +377,7 @@ public class Deduction {
 		return false;
 	}
 	
-	public boolean negElim(Proposition inP1, Proposition inP2, Proposition outP) {
+	public static boolean negElim(Proposition inP1, Proposition inP2, Proposition outP) {
 		if (inP2.places==1) {
 			if (inP2.place1.sameAs(inP1) && inP2.operation=='¬') {
 				if (outP.name.equals("⊥")) {
@@ -390,7 +390,7 @@ public class Deduction {
 		return false;
 	}
 	
-	public boolean exFalso(Proposition inP, Proposition outP) {
+	public static boolean exFalso(Proposition inP, Proposition outP) {
 		if (inP.name.equals("⊥")) {
 			return true;
 		}
@@ -399,7 +399,7 @@ public class Deduction {
 		return false;
 	}
 	
-	public boolean doubleNegElim(Proposition inP, Proposition outP) {
+	public static boolean doubleNegElim(Proposition inP, Proposition outP) {
 		if (inP.places==1 && inP.operation=='¬') {
 			if (inP.place1.places==1 && inP.place1.operation=='¬') {
 				if (inP.place1.place1.sameAs(outP)) {
@@ -412,7 +412,7 @@ public class Deduction {
 		return false;
 	}
 	
-	public boolean reiteration(Proposition inP, Proposition outP) {
+	public static boolean reiteration(Proposition inP, Proposition outP) {
 		if (inP.sameAs(outP)) {
 			return true;
 		}
@@ -421,7 +421,7 @@ public class Deduction {
 		return false;
 	}
 	
-	public boolean disjSyl(Proposition inP1, Proposition inP2, Proposition outP) {
+	public static boolean disjSyl(Proposition inP1, Proposition inP2, Proposition outP) {
 		if (inP1.places==2) {
 			if (inP1.operation=='∨') {
 				if (inP2.places==1) {
@@ -441,7 +441,7 @@ public class Deduction {
 		return false;
 	}
 	
-	public boolean modusToll(Proposition inP1, Proposition inP2, Proposition outP) {
+	public static boolean modusToll(Proposition inP1, Proposition inP2, Proposition outP) {
 		if (inP1.places==2 && inP1.operation=='→') {
 			if (inP2.places==1 && inP2.operation=='¬') {
 				if (inP2.place1.sameAs(inP1.place2)) {
@@ -458,7 +458,7 @@ public class Deduction {
 		return false;
 	}
 	
-	public boolean tertNonDat(Deduction inD1, Deduction inD2, Proposition outP) {
+	public static boolean tertNonDat(Deduction inD1, Deduction inD2, Proposition outP) {
 		if (inD1.lastPrem.places==1 && inD1.lastPrem.operation=='¬'){
 			if (inD1.lastPrem.place1.sameAs(inD2.lastPrem)) {
 				if (inD1.conc.sameAs(inD2.conc)) {
@@ -486,7 +486,7 @@ public class Deduction {
 		return false;
 	}
 
-	public boolean deMorg(Proposition inP, Proposition outP) {
+	public static boolean deMorg(Proposition inP, Proposition outP) {
 		if (inP.places==1 && inP.operation=='¬') {
 			if (inP.place1.places==2) {
 				if (inP.place1.operation=='∨') {

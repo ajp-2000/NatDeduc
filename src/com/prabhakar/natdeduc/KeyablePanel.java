@@ -130,6 +130,22 @@ public class KeyablePanel extends JPanel implements ActionListener, FocusListene
 		premButton.addActionListener(this);
 	}
 	
+	// Both panels need to do this when checking/deducing
+	int checkPrems() {
+		int numPrems = 0;
+		for (int p=0; p<prems; p++) {
+			String curr = premFields[p].getText();
+			if (!curr.isEmpty()) numPrems++;
+		}
+		
+		if (numPrems==0) {
+			JOptionPane.showMessageDialog(mainFrame, "Please provide at least one premise.", "No premises entered", JOptionPane.ERROR_MESSAGE);
+			return -1;
+		}
+		
+		return numPrems;
+	}
+	
 	public void actionPerformed(ActionEvent e) {}
 	
 	public void focusGained(FocusEvent e) {

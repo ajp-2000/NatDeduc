@@ -33,16 +33,8 @@ public class CheckPanel extends KeyablePanel implements ActionListener {
 	// Bring things together to check the validity of the deduction
 	private boolean check() {
 		// Sort out the premises
-		int numPrems = 0;
-		for (int p=0; p<prems; p++) {
-			String curr = premFields[p].getText();
-			if (!curr.isEmpty()) numPrems++;
-		}
-		
-		if (numPrems==0) {
-			JOptionPane.showMessageDialog(mainFrame, "Please provide at least one premise.", "No premises entered", JOptionPane.ERROR_MESSAGE);
-			return false;
-		}
+		int numPrems = checkPrems();
+		if (numPrems==-1) return false;
 		
 		Proposition[] premProps = new Proposition[numPrems];
 		for (int p=0; p<numPrems; p++) {
