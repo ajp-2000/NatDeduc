@@ -7,6 +7,9 @@ import javax.swing.*;
 
 public class DeducPanel extends KeyablePanel implements ActionListener {
 	JButton deducButton;
+	JFrame deducProgress;
+	JPanel dPane;
+	JLabel dLabel;
 	
 	final char[] operations = {'¬', '∧', '∨', '→', '↔'};
 	final int[] opPlaces = {1, 2, 2, 2, 2};									// ¬, ∧, ∨, →, ↔
@@ -156,7 +159,30 @@ public class DeducPanel extends KeyablePanel implements ActionListener {
 			}
 		}
 		
-		bruteForce(premProps, concProp, atomicProps);
+		// Finally, set up a window to show ongoing progress
+		this.deducProgress = new JFrame("Searching...");
+		this.deducProgress.setSize(340, 140);
+		this.deducProgress.setLocationRelativeTo(mainFrame);
+		this.deducProgress.setResizable(false);
+		this.deducProgress.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+		
+		this.dLabel = new JLabel("Searching ");
+		this.dPane = new JPanel();
+		this.dPane.add(this.dLabel);
+		this.deducProgress.add(this.dPane);
+		this.deducProgress.setVisible(true);
+		
+		// And show the result
+		Deduction finalDeduc = bruteForce(premProps, concProp, atomicProps);
+		
+		if (finalDeduc != null) {
+			// Show deduction in dialogue box
+			String message = "Deduction found!\n\n" + deducToString(finalDeduc);
+			//JOptionPane.showMessageDialog(mainFrame, message, "Deduction found", JOptionPane.INFORMATION_MESSAGE);
+			System.out.println(message);
+		} else {
+			;
+		}
 		
 		return true;
 	}
@@ -191,8 +217,8 @@ public class DeducPanel extends KeyablePanel implements ActionListener {
 		
 		/* A first attempt: pure brute force */
 		int maxBody = 20;
-		int added = 0;
-		Proposition[] body = new Proposition[maxBody];
+		//int added = 0;
+		//Proposition[] body = new Proposition[maxBody];
 		
 		// From here we will treat our atomic props as the premises, plus their immediate components,
 		// so that seedProp() gives anything which can be derived from the prems in one step
@@ -208,37 +234,40 @@ public class DeducPanel extends KeyablePanel implements ActionListener {
 			p++;
 		}
 		
-		for (int line=0; line<maxBody; line++) {
-			nextLine(premProps, newAtomics, concProp, 1);
-			System.exit(0);
+		// Create a Deduction object
+		ArrayList<Proposition> newLines = nextLine(premProps, newAtomics, concProp, 1, new ArrayList<Proposition>());
+		if (newLines != null) {
+			return new Deduction(premProps, (Proposition[])newLines.toArray(new Proposition[0]), concProp, mainFrame);
+		} else {
+			return null;
 		}
-		
-		Proposition pholder = new Proposition('p');
-		Proposition[] placeholder = {pholder};
-		Deduction d = new Deduction(premProps, placeholder, concProp, mainFrame);
-		return d;
 	}
 	
-	// Used (recursively) by bruteForce as the engine
-	private void nextLine(Proposition[] bank, Proposition[] atomics, Proposition concProp, int depth) {
-		//for (int p=0; p<atomics.length; p++) {
-		//	System.out.println(atomics[p].name);
-		//}
-		
-		
+	// Used (recursively) by bruteForce as the engine; returns an ArrayList of all the added lines
+	// bank holds all propositions which are currently established, including prems, while nLines
+	// keeps track of those which were added by some iteration of this method since its initial call
+	// bank is used for testing prospective new lines, nLines for returning
+	private ArrayList<Proposition> nextLine(Proposition[] bank, Proposition[] atomics, Proposition concProp, int depth, ArrayList<Proposition> nLines) {
+		ArrayList<Proposition> newLines;
 		for (long tries=0; tries<itsToLevel(10, atomics); tries++) {
 			Proposition newProp = seedProp(tries, atomics);
+			newLines = nLines;
+			newLines.add(newProp);
 			
 			// Check if newProp follows from anything thus far
 			int[] results = propFromBank(bank, newProp);
-			if (results[0] > 0) {
+			if (results[0] > 0 && !newProp.sameAs(bank[bank.length-1])) {
 				newProp.configName();
-				System.out.println(newProp.name);
+				//dLabel.setText("Searching: " + newProp.name);
+				//System.out.println("Trying: " + newProp.name + ", depth " + Integer.toString(depth));
 				if (newProp.sameAs(concProp)) {
-					// Conclusion reached
-					String message = "Deduction found!\n\n" + deducToString(bank, newProp);
-					JOptionPane.showMessageDialog(mainFrame, message, "Deduction found", JOptionPane.INFORMATION_MESSAGE);
-					return;
+					// Conclusion reached!
+					// Replace any escape characters in complex props with the props they represent
+					for (int p=0; p<bank.length; p++) {
+						bank[p].configName();
+					}
+					
+					return newLines;
 				}
 				
 				// Try pursuing this prop; if we get nowhere by a certain limit, let the next prop try
@@ -266,11 +295,15 @@ public class DeducPanel extends KeyablePanel implements ActionListener {
 					try {
 						Thread.sleep(1);
 					} catch(Exception e) {}
-					nextLine(newBank, newAtomics, concProp, depth+1);
+					
+					
+					ArrayList<Proposition> result = nextLine(newBank, newAtomics, concProp, depth+1, newLines);
+					if (result != null) return result;
 				}
-				//System.out.println("Trying new branch");
 			}
 		}
+		
+		return null;
 	}
 	
 	// Generate one of the every-proposition-possible from a number, such that every proposition
@@ -371,7 +404,7 @@ public class DeducPanel extends KeyablePanel implements ActionListener {
 		if (Deduction.disjIntro(inP, outP)) return DISJINTRO;
 		if (Deduction.exFalso(inP, outP)) return EXFALSO;
 		if (Deduction.doubleNegElim(inP, outP)) return DOUBLENEGELIM;
-		if (Deduction.reiteration(inP, outP)) return REITERATION;
+		//if (Deduction.reiteration(inP, outP)) return REITERATION;						// We won't use reiteration here because no deduction strictly requires it
 		if (Deduction.deMorg(inP, outP)) return DEMORGAN;
 		
 		return 0;
@@ -449,19 +482,30 @@ public class DeducPanel extends KeyablePanel implements ActionListener {
 	}
 	
 	// Write a deduction as a plain string, each line on its own line
-	private String deducToString(Proposition[] bank, Proposition conc) {
-		String deduc = "";
+	private String deducToString(Deduction deduc) {
+		String deducStr = "";
 		
-		for (int p=0; p<bank.length; p++) {
-			if (bank[p].name == "Deduction") bank[p].configName();
-			deduc += bank[p].name;
-			deduc += "\n";
+		// Premises
+		for (int i=0; i<deduc.numPrems; i++) {
+			if (deduc.prems[i].name == "Deduction") deduc.prems[i].configName();
+			deducStr += String.format("%1$6s", i+1) + ". ";
+			deducStr += deduc.prems[i].name;
+			deducStr += "\n";
 		}
 		
-		conc.configName();
-		deduc += conc.name;
+		// Body
+		for (int i=0; i<deduc.numBody; i++) {
+			deducStr += String.format("%1$6s", i+1) + ". ";
+			deducStr += deduc.body[i].name;
+			deducStr += "\n";
+		}
 		
-		return deduc;
+		// Conclusion
+		deduc.conc.configName();
+		deducStr += "Conc. ";
+		deducStr += deduc.conc.name;
+		
+		return deducStr;
 	}
 	
 	public void actionPerformed(ActionEvent e) {

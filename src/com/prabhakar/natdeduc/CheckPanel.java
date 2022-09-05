@@ -153,7 +153,7 @@ public class CheckPanel extends KeyablePanel implements ActionListener {
 		addConc();
 		addCheckButton();
 		addPremButton();
-		//concField.replaceSelection(conc);
+		concField.replaceSelection(conc);
 		bodyArea.replaceSelection(body);
 		
 		repaint();
