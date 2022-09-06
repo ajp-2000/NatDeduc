@@ -6,10 +6,15 @@ import java.util.*;
 import javax.swing.*;
 
 public class DeducPanel extends KeyablePanel implements ActionListener {
+	final int MAXDEPTH = 4;
+	SwingWorker<Boolean, Void> sw;
+	
 	JButton deducButton;
 	JFrame deducProgress;
 	JPanel dPane;
-	JLabel dLabel;
+	JLabel[] dLabels;
+	JButton cancelButton;
+	JProgressBar progBar;
 	
 	final char[] operations = {'¬', '∧', '∨', '→', '↔'};
 	final int[] opPlaces = {1, 2, 2, 2, 2};									// ¬, ∧, ∨, →, ↔
@@ -161,27 +166,42 @@ public class DeducPanel extends KeyablePanel implements ActionListener {
 		
 		// Finally, set up a window to show ongoing progress
 		this.deducProgress = new JFrame("Searching...");
-		this.deducProgress.setSize(340, 140);
-		this.deducProgress.setLocationRelativeTo(mainFrame);
-		this.deducProgress.setResizable(false);
 		this.deducProgress.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		
-		this.dLabel = new JLabel("Searching ");
 		this.dPane = new JPanel();
-		this.dPane.add(this.dLabel);
+		GridLayout grid = new GridLayout(MAXDEPTH+2, 1);
+		grid.setHgap(10);
+		this.dPane.setLayout(grid);
 		this.deducProgress.add(this.dPane);
 		this.deducProgress.setVisible(true);
 		
+		this.dLabels = new JLabel[MAXDEPTH];
+		for (int d=0; d<MAXDEPTH; d++) {
+			this.dLabels[d] = new JLabel("");
+			this.dLabels[d].setPreferredSize(new Dimension(300, 1));
+			this.dPane.add(this.dLabels[d]);
+		}
+		this.cancelButton = new JButton("Cancel");
+		this.cancelButton.addActionListener(this);
+		this.dPane.add(cancelButton);
+		
+		this.deducProgress.pack();
+		this.deducProgress.setLocationRelativeTo(mainFrame);
+		
 		// And show the result
 		Deduction finalDeduc = bruteForce(premProps, concProp, atomicProps);
+		this.dPane.removeAll();
+		this.deducProgress.dispose();
 		
 		if (finalDeduc != null) {
 			// Show deduction in dialogue box
 			String message = "Deduction found!\n\n" + deducToString(finalDeduc);
-			//JOptionPane.showMessageDialog(mainFrame, message, "Deduction found", JOptionPane.INFORMATION_MESSAGE);
-			System.out.println(message);
+			JOptionPane.showMessageDialog(mainFrame, message, "Deduction found", JOptionPane.INFORMATION_MESSAGE);
 		} else {
-			;
+			// Exit silently if the search was cancelled, else declare nothing found
+			if (sw.isCancelled()) return false;
+			String message = "No deduction found up to depth of " + Integer.toString(MAXDEPTH) + ".\n";
+			JOptionPane.showMessageDialog(mainFrame, message, "Deduction not found", JOptionPane.INFORMATION_MESSAGE);
 		}
 		
 		return true;
@@ -217,8 +237,6 @@ public class DeducPanel extends KeyablePanel implements ActionListener {
 		
 		/* A first attempt: pure brute force */
 		int maxBody = 20;
-		//int added = 0;
-		//Proposition[] body = new Proposition[maxBody];
 		
 		// From here we will treat our atomic props as the premises, plus their immediate components,
 		// so that seedProp() gives anything which can be derived from the prems in one step
@@ -235,7 +253,12 @@ public class DeducPanel extends KeyablePanel implements ActionListener {
 		}
 		
 		// Create a Deduction object
-		ArrayList<Proposition> newLines = nextLine(premProps, newAtomics, concProp, 1, new ArrayList<Proposition>());
+		Proposition[] newerAtomics = removeDuplicates(newAtomics);
+		this.progBar = new JProgressBar(0, 100);
+		this.dPane.add(progBar);
+		
+		ArrayList<Proposition> newLines = this.nextLine(premProps, newerAtomics, concProp, 1, new ArrayList<Proposition>());
+		
 		if (newLines != null) {
 			return new Deduction(premProps, (Proposition[])newLines.toArray(new Proposition[0]), concProp, mainFrame);
 		} else {
@@ -243,26 +266,69 @@ public class DeducPanel extends KeyablePanel implements ActionListener {
 		}
 	}
 	
+	// Configure the text being updated in the "searching..." window in a method of its own
+	String[] progressStr = new String[MAXDEPTH];
+	
+	private void progressText(String propName, int depth) {
+		int s;
+		progressStr[depth-1] = "Trying: " + propName;
+		
+		// Clear the rest of the array (if we're in a new branch)
+		for (s=depth; s<MAXDEPTH; s++) {
+			progressStr[s] = null;
+		}
+		
+		for (s=0; s<MAXDEPTH; s++) {
+			this.dLabels[s].setText((progressStr[s]==null) ? "" : progressStr[s]);
+		}
+		
+		this.deducProgress.revalidate();
+		this.deducProgress.repaint();
+	}
+	
 	// Used (recursively) by bruteForce as the engine; returns an ArrayList of all the added lines
 	// bank holds all propositions which are currently established, including prems, while nLines
 	// keeps track of those which were added by some iteration of this method since its initial call
 	// bank is used for testing prospective new lines, nLines for returning
+	int progress = 0;
+	float step1;
+	float step2;
+	
 	private ArrayList<Proposition> nextLine(Proposition[] bank, Proposition[] atomics, Proposition concProp, int depth, ArrayList<Proposition> nLines) {
 		ArrayList<Proposition> newLines;
-		for (long tries=0; tries<itsToLevel(10, atomics); tries++) {
+		
+		for (long tries=0; tries<itsToLevel(1, atomics); tries++) {
+			// Check the whole deduction-search hasn't been cancelled
+			if (sw.isCancelled()) return null;
+			
+			// Progress is calculated from the progress through the first two layers of depth. We
+			// can't calculate how many props will be tried before trying them, because we don't
+			// know which attempts will follow from bank, and therefore how many attempts will be
+			// pursued to a deeper layer. This is an okay heuristic.
+			// itsToLevel(1, atomics) returns different results in the two lines below
+			this.progBar.setValue(progress);
+			if (depth == 1) {
+				step1 = 100 / itsToLevel(1, atomics);
+				progress = (int)(tries * step1);
+			}
+			if (depth == 2) {
+				step2 = step1 / itsToLevel(1, atomics);
+				progress += (int)(tries * step2);
+			}
+			
 			Proposition newProp = seedProp(tries, atomics);
 			newLines = nLines;
-			newLines.add(newProp);
 			
 			// Check if newProp follows from anything thus far
 			int[] results = propFromBank(bank, newProp);
 			if (results[0] > 0 && !newProp.sameAs(bank[bank.length-1])) {
-				newProp.configName();
-				//dLabel.setText("Searching: " + newProp.name);
-				//System.out.println("Trying: " + newProp.name + ", depth " + Integer.toString(depth));
+				// At this point we have a proposition of depth depth which follows from bank
+				newLines.add(newProp);
+				progressText(newProp.name, depth);
+				
 				if (newProp.sameAs(concProp)) {
 					// Conclusion reached!
-					// Replace any escape characters in complex props with the props they represent
+					//Replace any escape characters in complex props with the props they represent
 					for (int p=0; p<bank.length; p++) {
 						bank[p].configName();
 					}
@@ -271,7 +337,7 @@ public class DeducPanel extends KeyablePanel implements ActionListener {
 				}
 				
 				// Try pursuing this prop; if we get nowhere by a certain limit, let the next prop try
-				if (depth<20) {
+				if (depth<MAXDEPTH) {
 					// Update the two parameters
 					Proposition[] newBank = new Proposition[bank.length+1];
 					for (int p=0; p<bank.length; p++) {
@@ -293,11 +359,11 @@ public class DeducPanel extends KeyablePanel implements ActionListener {
 					}
 					
 					try {
-						Thread.sleep(1);
+						Thread.sleep(10);
 					} catch(Exception e) {}
 					
 					
-					ArrayList<Proposition> result = nextLine(newBank, newAtomics, concProp, depth+1, newLines);
+					ArrayList<Proposition> result = this.nextLine(newBank, removeDuplicates(newAtomics), concProp, depth+1, newLines);
 					if (result != null) return result;
 				}
 			}
@@ -309,6 +375,7 @@ public class DeducPanel extends KeyablePanel implements ActionListener {
 	// Generate one of the every-proposition-possible from a number, such that every proposition
 	// is uniquely generated by some seed.
 	private Proposition seedProp(long seed, Proposition[] atomics) {
+		Proposition result;
 		long numAtomics = atomics.length;
 		int numOperations = opPlaces.length;
 		
@@ -332,7 +399,7 @@ public class DeducPanel extends KeyablePanel implements ActionListener {
 		// At each level, numAtomics is the number of props at the level just previous, and 
 		// levelProps, the number at the current level
 		
-		for (int level=1; level<5; level++) {
+		for (int level=1; level<MAXDEPTH; level++) {
 			long levelProps = (numAtomics * onePlaces) + (numAtomics*numAtomics * twoPlaces);
 			if (seed<levelProps) {
 				// Then the prop is somewhere on this level, so pinpoint it
@@ -351,7 +418,9 @@ public class DeducPanel extends KeyablePanel implements ActionListener {
 						for (int basicProp=0; basicProp<numAtomics; basicProp++) {
 							if (levelIteration==seed) {
 								// Form the proposition
-								return new Proposition(operations[op], seedProp(basicProp, atomics), "Deduction");
+								result = new Proposition(operations[op], seedProp(basicProp, atomics), "Deduction");
+								result.configName();
+								return result;
 							}
 							
 							levelIteration++;
@@ -361,7 +430,9 @@ public class DeducPanel extends KeyablePanel implements ActionListener {
 							for (int basicProp2=0; basicProp2<numAtomics; basicProp2++) {
 								if (levelIteration==seed) {
 									// Form the proposition
-									return new Proposition(seedProp(basicProp1, atomics), operations[op], seedProp(basicProp2, atomics), "Deduction");
+									result = new Proposition(seedProp(basicProp1, atomics), operations[op], seedProp(basicProp2, atomics), "Deduction");
+									result.configName();
+									return result;
 								}
 								
 								levelIteration++;
@@ -390,9 +461,7 @@ public class DeducPanel extends KeyablePanel implements ActionListener {
 			return atomics.length;
 		}
 		
-		sum += (sum*onePlaces) + (sum*sum*twoPlaces);
-		
-		return sum;
+		return sum + (sum*onePlaces) + (sum*sum*twoPlaces);
 	}
 	
 	// A function sufficiently different from Deduction.follows()
@@ -452,41 +521,45 @@ public class DeducPanel extends KeyablePanel implements ActionListener {
 		return results;
 	}
 	
-	// Return a non-repeating array of all the immediate components in each given prop
+	// Return an ArrayList of all the immediate components in each given prop
+	// Ensuring no repeats is done separately, after the return value is added to existing atomics
 	private ArrayList<Proposition> splitProps(Proposition[] inPs) {
 		ArrayList<Proposition> molecules = new ArrayList<Proposition>();
-		boolean contains;
 		
 		for (int p=0; p<inPs.length; p++) {
-			if (inPs[p].places >= 1) {
-				contains = false;
-				for (int m=0; m<molecules.size(); m++) {
-					if (inPs[p].place1.sameAs(molecules.get(m))) contains = true;
-				}
-				if (!contains) {
-					molecules.add(inPs[p].place1);
-				}
-			} 
-			if (inPs[p].places == 2) {
-				contains = false;
-				for (int m=0; m<molecules.size(); m++) {
-					if (inPs[p].place2.sameAs(molecules.get(m))) contains = true;
-				}
-				if (!contains) {
-					molecules.add(inPs[p].place2);
-				}
-			}
+			if (inPs[p].places >= 1) molecules.add(inPs[p].place1);
+			
+			if (inPs[p].places == 2) molecules.add(inPs[p].place2);
 		}
 		
 		return molecules;
 	}
 	
+	// Return a sized-down array of props with no duplicates
+	private Proposition[] removeDuplicates(Proposition[] inPs) {
+		ArrayList<Proposition> unique = new ArrayList<Proposition>();
+		boolean contains;
+		
+		for (int p=0; p<inPs.length; p++) {
+			contains = false;
+			
+			for (int q=0; q<unique.size(); q++) {
+				if (inPs[p].sameAs(unique.get(q))) contains = true;
+			}
+			
+			if (!contains) unique.add(inPs[p]);
+		}
+		
+		return (Proposition[]) unique.toArray(new Proposition[0]);
+	}
+	
 	// Write a deduction as a plain string, each line on its own line
 	private String deducToString(Deduction deduc) {
 		String deducStr = "";
+		int i;
 		
 		// Premises
-		for (int i=0; i<deduc.numPrems; i++) {
+		for (i=0; i<deduc.numPrems; i++) {
 			if (deduc.prems[i].name == "Deduction") deduc.prems[i].configName();
 			deducStr += String.format("%1$6s", i+1) + ". ";
 			deducStr += deduc.prems[i].name;
@@ -494,9 +567,9 @@ public class DeducPanel extends KeyablePanel implements ActionListener {
 		}
 		
 		// Body
-		for (int i=0; i<deduc.numBody; i++) {
+		for (int j=0; j<deduc.numBody; i++, j++) {
 			deducStr += String.format("%1$6s", i+1) + ". ";
-			deducStr += deduc.body[i].name;
+			deducStr += deduc.body[j].name;
 			deducStr += "\n";
 		}
 		
@@ -511,11 +584,21 @@ public class DeducPanel extends KeyablePanel implements ActionListener {
 	public void actionPerformed(ActionEvent e) {
 		switch (e.getActionCommand()) {
 			case "Deduce":
-				deduce();
+				// This may take time, so execute it outside the Event Dispatch Thread
+				this.sw = new SwingWorker<Boolean, Void>(){
+					@Override
+					public Boolean doInBackground() {
+						deduce();
+						return true;
+					}
+				};
+				sw.execute();
 				break;
 			case "Add premise":
 				incrPrems();
 				break;
+			case "Cancel":
+				sw.cancel(true);
 		}
 	}
 }

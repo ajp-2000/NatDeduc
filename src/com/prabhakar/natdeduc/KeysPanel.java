@@ -37,6 +37,11 @@ public class KeysPanel extends JPanel implements ActionListener {
 		keyButtons[CONTRKEY] = new JButton("⊥");
 		keyButtons[ASSUMPKEY] = new JButton("Assumption");
 		
+		// Until we implement FOL
+		keyButtons[AXKEY].setEnabled(false);
+		keyButtons[EXKEY].setEnabled(false);
+		keyButtons[NOTEQKEY].setEnabled(false);
+		
 		Dimension keySize = new Dimension(45, 30);
 		for (int i=0; i<keyButtons.length; i++) {
 			if (i!=ASSUMPKEY) keyButtons[i].setPreferredSize(keySize);

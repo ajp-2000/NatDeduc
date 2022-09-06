@@ -79,7 +79,7 @@ public class KeyablePanel extends JPanel implements ActionListener, FocusListene
 		return c;
 	}
 	
-	// Add a premise JLabel at the present y-value in the bag, then a JTextField, then go  down one
+	// Add a premise JLabel at the present y-value in the bag, then a JTextField, then go down one
 	void addPrem() {
 		// The JLabel
 		currPrem++;
