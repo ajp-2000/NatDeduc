@@ -8,7 +8,6 @@ import javax.swing.JOptionPane;
 
 public class Parser {
 	HashMap<Character, Proposition> escapeProps = new HashMap<Character, Proposition>();
-	final char assumpChar = (char) 12288;
 	
 	// Check if a line has legitimate bracketing (including none)
 	public boolean validBrackets(String line) {
@@ -99,6 +98,8 @@ public class Parser {
 		switch (ch) {
 			case '¬':
 			case '~':
+			case '@':
+			case '£':
 				return true;
 		}
 		
@@ -192,7 +193,12 @@ public class Parser {
 		
 		if (isOnePlaceOperation(chs[0])) {
 			if (len>2) {
-				throw new ParseException(String.format("Too many arguments for one-place operation '%c'.\n", chs[0]));
+				if (chs[0]=='@' || chs[0]=='£') {
+					// The assumption escape chars are technically one-place ops, but are treated differently
+					return parseBasicProp(s.substring(1));
+				} else {
+					throw new ParseException(String.format("Too many arguments for one-place operation '%c'.\n", chs[0]));
+				}
 			} else if (len<2){
 				throw new ParseException(String.format("Argument needed for one-place operation '%c'.\n", chs[0]));
 			} else {
@@ -238,6 +244,9 @@ public class Parser {
 	// null is returned. Whatever method calls this one only has to detect the null and 
 	// end its own thing. This is so that the exception can be printed differently depending
 	// on where parseLine() was called from
+	char assumpChar = '@';
+	char lastAssumpChar = '£';
+	
 	public Proposition parseLine(String line) throws ParseException {
 		if (!validBrackets(line)) {
 			throw new ParseException("Invalid bracketing.");
@@ -252,15 +261,36 @@ public class Parser {
 		// Allow negations to be unbracketed by bracketing them here
 		char[] chs = negBrackets(line).toCharArray();
 		
-		// Deal with assumption blocks
-		if (chs[0]==assumpChar) {
+		// Parse any line in an assumption block as a one-place prop with the escape character
+		// as its operation. The processing of the block gets done when the deduction is checked,
+		// at which point all of these props are recognised, and their place1 propositions are made
+		// into separate deductions for each block
+		if (chs[0]=='@' || chs[0]=='£') {
+			return parseLine(line.substring(1)).makeAssump(chs[0]);
+		}
+		
+		/*if (chs[0]==assumpChar) {
 			String assumed = line.substring(1);
 			if (assumed==null) {
 				throw new ParseException("Something's gone wrong with the assumption syntax.");
 			} else {
-				return parseLine(assumed).makeAssump();
+				// Parse the content of this line, then wrap it up in a prop object as an assump, then switch chars
+				lastAssumpChar = assumpChar;
+				assumpChar = (lastAssumpChar=='@') ? '£' : '@';
+				//Proposition assumpProp = parseLine(assumed).makeAssump(lastAssumpChar);
+				if (!assumpProp.place1.atomic) {
+					// Represent the assumed content by an escape proposition if it isn't atomic 
+					char esc = nextEsc();
+					escapeProps.put(esc, assumpProp.place1);
+					assumpProp.place1 = new Proposition(esc);
+				}
+				
+				return parseLine(assumed).makeAssump(lastAssumpChar);
 			}
-		}
+		} else if (chs[0]=='@' || chs[0]=='£') {
+			// I.E. if it's the wrong assumption escape character
+			throw new ParseException("Something's gone wrong with the assumption syntax.");
+		}*/
 		
 		// Trace out where the brackets lie to know where to find the inmost propositions
 		int[] depth = new int[chs.length];
@@ -330,7 +360,7 @@ public class Parser {
 		
 		String lineNew = "";
 		
-		// The very painful process of copying out those parts of line which aren't in basic
+		// Copy out those parts of line which aren't in basic
 		// j tracks where we are in peaks
 		// k tracks which peak we are on
 		int j = 0;
@@ -355,8 +385,6 @@ public class Parser {
 				}
 			}
 		}
-		//System.out.println(line);
-		//System.out.println(lineNew);
 		
 		
 		try {

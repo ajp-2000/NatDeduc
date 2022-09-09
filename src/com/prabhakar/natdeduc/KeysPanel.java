@@ -15,7 +15,7 @@ public class KeysPanel extends JPanel implements ActionListener {
 	final int ANDKEY = 6;
 	final int ORKEY = 7;
 	final int CONTRKEY = 8;
-	final int ASSUMPKEY = 9;
+	JButton premButton;
 	
 	Main mainFrame;
 	
@@ -25,7 +25,7 @@ public class KeysPanel extends JPanel implements ActionListener {
 		this.setLayout(flow);
 		mainFrame = m;
 		
-		keyButtons = new JButton[10];
+		keyButtons = new JButton[9];
 		keyButtons[AXKEY] = new JButton("∀x");
 		keyButtons[EXKEY] = new JButton("∃x");
 		keyButtons[CONDKEY] = new JButton("→");
@@ -35,7 +35,7 @@ public class KeysPanel extends JPanel implements ActionListener {
 		keyButtons[ANDKEY] = new JButton("∧");
 		keyButtons[ORKEY] = new JButton("∨");
 		keyButtons[CONTRKEY] = new JButton("⊥");
-		keyButtons[ASSUMPKEY] = new JButton("Assumption");
+		premButton = new JButton("Add premise");
 		
 		// Until we implement FOL
 		keyButtons[AXKEY].setEnabled(false);
@@ -44,14 +44,19 @@ public class KeysPanel extends JPanel implements ActionListener {
 		
 		Dimension keySize = new Dimension(45, 30);
 		for (int i=0; i<keyButtons.length; i++) {
-			if (i!=ASSUMPKEY) keyButtons[i].setPreferredSize(keySize);
+			keyButtons[i].setPreferredSize(keySize);
 			keyButtons[i].setFocusable(false);
 			add(keyButtons[i]);
 			keyButtons[i].addActionListener(this);
 		}
+		
+		premButton.setEnabled(true);
+		add(premButton);
+		premButton.addActionListener(this);
 	}
 	
 	public void actionPerformed(ActionEvent e) {
+		// Go to Main, so that the same method can add the character to either of the two panels
 		mainFrame.keyButton(e.getActionCommand());
 	}
 }

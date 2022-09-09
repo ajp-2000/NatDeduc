@@ -14,13 +14,13 @@ package com.prabhakar.natdeduc;
 
 import java.awt.*;
 import javax.swing.*;
+import javax.swing.event.*;
 
 public class Main extends JFrame {
 	JTabbedPane tabs;
 	DeducPanel deducPanel;
 	CheckPanel checkPanel;
-	
-	final char assumpChar = (char) 12288;
+	KeysPanel keysPanel;
 	
 	public Main() {
 		super("NatDeduc");
@@ -56,7 +56,7 @@ public class Main extends JFrame {
 		tabs.addTab("Check Validity", checkPanel);
 		pane.add(tabs);
 		
-		KeysPanel keysPanel = new KeysPanel(this);
+		keysPanel = new KeysPanel(this);
 		pane.add(keysPanel);
 		
 		add(pane);
@@ -74,14 +74,18 @@ public class Main extends JFrame {
 		// We use getSelectedIndex() because the TabbedPane as a whole won't be within focus
 		if (key=="∀x") key = "∀";
 		if (key=="∃x") key = "∃";
-		if (key=="Assumption") key = Character.toString(assumpChar);
 		
+		// Redirect premise adding to the KeyablePanel currently in focus
 		if (tabs.getSelectedIndex()==0) {
-			if (deducPanel.focused!=null) {
+			if (key=="Add premise") {
+				deducPanel.incrPrems();
+			} else if (deducPanel.focused!=null) {
 				deducPanel.focused.replaceSelection(key);
 			}
 		} else {
-			if (checkPanel.focused!=null) {
+			if (key=="Add premise") {
+				checkPanel.incrPrems();
+			} else if (checkPanel.focused!=null) {
 				checkPanel.focused.replaceSelection(key);
 			}
 		}

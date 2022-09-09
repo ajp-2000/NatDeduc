@@ -162,38 +162,32 @@ public class Deduction {
 		return false;
 	}
 	
+	// Check the validity of the object
 	public boolean check() {
-		// Parse the assumption bits
-		for (int p=0; p<numPrems; p++) {
-			if (prems[p].operation=='@') {
-				JOptionPane.showMessageDialog(mainFrame, "Premises can't include assumption blocks.", "Syntax error in premises", JOptionPane.ERROR_MESSAGE);
-				return false;
-			}
-		}
-		
-		if (conc.operation=='@') {
-			JOptionPane.showMessageDialog(mainFrame, "The conclusion can't be an assumption.", "Syntax error in conclusion", JOptionPane.ERROR_MESSAGE);
-			return false;
-		}
-		
-		// Handle them iteratively
+		// Handle assumption blocks iteratively
+		// First, count how many we have
 		int numAssumps = 0;
 		for (int p=0; p<numBody; p++) {
-			if (body[p].operation=='@') {
+			if (body[p].operation=='@' || body[p].operation=='£') {
+				char assumpChar = body[p].operation;
 				numAssumps++;
-				while (body[p].operation=='@') {
+				while (body[p].operation == assumpChar) {
 					p++;
 					if (p==numBody) break;
 				}
 			}
 		}
 		
+		// Copy the assumption blocks, now counted, into assumpBlocks
 		Deduction[] assumpBlocks = new Deduction[numAssumps];
 		int d = 0;
-		for (int p=0; p<numBody; p++) {
+		int p = 0;
+		
+		while (p<numBody) {
 			int blockLen = 0;
-			if (body[p].operation=='@') {
-				while (body[p].operation=='@') {
+			if (body[p].operation=='@' || body[p].operation=='£') {
+				char assumpChar = body[p].operation;
+				while (body[p].operation == assumpChar) {
 					blockLen++;
 					p++;
 					if (p==numBody) break;
@@ -203,14 +197,13 @@ public class Deduction {
 					return false;
 				}
 				
-				//Proposition[] assumpPrem = {body[p-blockLen].place1};
 				Proposition assumpConc = body[p-1].place1;
 				Proposition[] assumpBody = new Proposition[blockLen-2];
 				for (int q=0; q<blockLen-2; q++) {
 					assumpBody[q] = body[p-blockLen+q+1].place1;
 				}
 				
-				// Add the overall premises to those the assumption can use (it can)
+				// Add the overall premises to those the assumption can use
 				Proposition[] assumpPrems = new Proposition[numPrems+1];
 				for (int pr=0; pr<numPrems; pr++) {
 					assumpPrems[pr] = prems[pr];
@@ -220,19 +213,23 @@ public class Deduction {
 				assumpBlocks[d] = new Deduction(assumpPrems, assumpBody, assumpConc, mainFrame);
 				if (!assumpBlocks[d].check()) return false;
 				d++;
+			} else {
+				p++;
 			}
 		}
 		
 		// Now that we get to this point, anything within assumption blocks is valid
-		for (int p=0; p<numBody; p++) {
-			if (!body[p].atomic && body[p].operation=='@') continue;
+		for (p=0; p<numBody; p++) {
+			if (!body[p].atomic && (body[p].operation=='@' || body[p].operation=='£')) continue;
 			if (!follows(body[p], p, assumpBlocks)) {
+				body[p].configName();
 				JOptionPane.showMessageDialog(mainFrame, "Proposition " + body[p].name + " does not follow.", "Logical error in body", JOptionPane.ERROR_MESSAGE);
 				return false;
 			}
 		}
 		
 		if (!follows(conc, numBody, assumpBlocks)) {
+			conc.configName();
 			JOptionPane.showMessageDialog(mainFrame, "Proposition " + conc.name + " does not follow.", "Logical error in conclusion", JOptionPane.ERROR_MESSAGE);
 			return false;
 		}

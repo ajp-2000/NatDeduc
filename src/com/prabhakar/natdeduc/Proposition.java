@@ -60,8 +60,8 @@ public class Proposition {
 	}
 	
 	// Return an object which is the input, but within an assumption block
-	public Proposition makeAssump() {
-		return new Proposition('@', this, this.name);
+	public Proposition makeAssump(char assumpChar) {
+		return new Proposition(assumpChar, this, this.name);
 	}
 	
 	public boolean sameAs(Proposition target) {

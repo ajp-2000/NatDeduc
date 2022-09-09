@@ -116,7 +116,7 @@ public class KeyablePanel extends JPanel implements ActionListener, FocusListene
 	
 	// And the button to add a new premise
 	void addPremButton() {
-		premButton = new JButton("Add premise");
+		/*premButton = new JButton("Add premise");
 		
 		GridBagConstraints c = new GridBagConstraints();
 		c.gridx = 2;
@@ -127,7 +127,7 @@ public class KeyablePanel extends JPanel implements ActionListener, FocusListene
 		
 		bag.setConstraints(premButton, c);
 		this.add(premButton);
-		premButton.addActionListener(this);
+		premButton.addActionListener(this);*/
 	}
 	
 	// Both panels need to do this when checking/deducing

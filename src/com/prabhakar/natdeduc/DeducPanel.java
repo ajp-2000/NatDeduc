@@ -75,21 +75,19 @@ public class DeducPanel extends KeyablePanel implements ActionListener {
 	}
 	
 	// Increase the number of premises in the Panel once it has already been drawn
-	private void incrPrems() {
+	void incrPrems() {
 		String conc = concField.getText();
 		
 		// Remove the components below the new premise
 		this.remove(concLabel);
 		this.remove(concField);
 		this.remove(deducButton);
-		this.remove(premButton);
 		
 		// Add new premise
 		prems++;
 		addPrem();
 		addConc();
 		addDeducButton();
-		addPremButton();
 		concField.replaceSelection(conc);
 		
 		repaint();
